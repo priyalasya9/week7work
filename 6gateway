@@ -63,3 +63,277 @@ Public subnet route table must have:
 
 Go to Private EC2 terminal: (which we have connected in public instance)
 ping google.com
+
+-------------------------
+EXCELLENT.
+You literally pasted your **actual Week 6 lab procedure** — and this is a VERY STANDARD Cloud Lab experiment.
+
+Title of your Week 6:
+
+> VPC with NAT Gateway + Bastion (Public & Private EC2 + MySQL setup)
+
+Don’t worry. This looks long but it is actually just a **continuation of Week 5** (which you already did).
+So your base VPC + subnets = already useful.
+
+Now I’ll convert your messy notes into a **CLEAN EXAM STEP-BY-STEP PROCEDURE (POINTS)** exactly like record + lab execution.
+
+---
+
+# 🧪 WEEK 6 — VPC WITH NAT GATEWAY + PRIVATE INSTANCE (FULL PROCEDURE)
+
+# 🎯 AIM
+
+To create a NAT Gateway in a custom VPC, launch public and private EC2 instances, and access the private instance securely via the public instance (Bastion Host) with internet access through NAT Gateway.
+
+---
+
+# 🧱 PREREQUISITE (FROM WEEK 5)
+
+Make sure you already have:
+
+* Custom VPC (10.0.0.0/16)
+* Public Subnet (10.0.1.0/24)
+* Private Subnet (10.0.2.0/24)
+* Internet Gateway attached
+* Route table for public subnet (0.0.0.0/0 → IGW)
+
+(You already did this in Week 5 ✔)
+
+---
+
+# 🖥️ PART A — LAUNCH PUBLIC EC2 (BASTION HOST)
+
+## Step 1: Launch Public Instance
+
+1. Go to EC2 → Launch Instance
+2. Name: `Public-Instance`
+3. AMI: Ubuntu
+4. Instance type: t2.micro
+5. Key pair: Select your existing key (.pem)
+6. Network settings:
+
+   * VPC: Your custom VPC
+   * Subnet: Public Subnet (10.0.1.0/24)
+   * Auto-assign Public IP: Enable
+7. Security Group:
+
+   * Allow SSH (Port 22)
+8. Launch Instance
+
+This will act as Bastion Host.
+
+---
+
+# 🔒 PART B — LAUNCH PRIVATE EC2 INSTANCE
+
+## Step 2: Create Private Instance
+
+1. Launch Instance again
+2. Name: `Private-Instance`
+3. AMI: Ubuntu
+4. Instance type: t2.micro
+5. Same Key pair
+6. Network settings:
+
+   * VPC: Your VPC
+   * Subnet: Private Subnet (10.0.2.0/24)
+   * Auto-assign Public IP: DISABLE
+7. Security Group Rule:
+   Add:
+
+   * SSH (22) → Source: Public Instance Security Group
+   * MySQL/Aurora (3306) → Source: Anywhere or VPC CIDR (10.0.0.0/16)
+
+Launch instance.
+
+Now private instance has ONLY private IP (no internet).
+
+---
+
+# 🔑 PART C — CONNECT TO PRIVATE INSTANCE VIA PUBLIC INSTANCE
+
+## Step 3: Connect to Public Instance
+
+Using PuTTY or SSH:
+
+```bash
+ssh -i yourkey.pem ubuntu@PUBLIC-IP
+```
+
+---
+
+## Step 4: Copy PEM File Inside Public Instance (VERY IMPORTANT)
+
+On your local machine:
+Copy the same .pem file to public instance.
+
+Example:
+
+```bash
+scp -i yourkey.pem yourkey.pem ubuntu@PUBLIC-IP:~
+```
+
+Now inside public instance:
+
+```bash
+chmod 400 yourkey.pem
+```
+
+(This matches your lab instruction ✔)
+
+---
+
+## Step 5: SSH into Private Instance (Bastion Method)
+
+Use private IP:
+
+```bash
+ssh -i yourkey.pem ubuntu@10.0.2.x
+```
+
+(Where 10.0.2.x = private instance private IP)
+
+Now you are inside private EC2 🎯
+
+---
+
+# 🗄️ PART D — INSTALL MYSQL IN PRIVATE INSTANCE
+
+## Step 6: Update System
+
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+---
+
+## Step 7: Install MySQL Server
+
+```bash
+sudo apt install mysql-server -y
+```
+
+---
+
+## Step 8: Check MySQL Status
+
+```bash
+sudo systemctl status mysql
+```
+
+Status should show: Active (running)
+
+(This step is explicitly mentioned in your lab notes.)
+
+---
+
+# 🌍 PART E — CREATE NAT GATEWAY (CORE WEEK 6 STEP)
+
+## Step 9: Create NAT Gateway
+
+Go to:
+VPC → NAT Gateways → Create NAT Gateway
+
+Fill:
+
+* Name: `nat-gw`
+* VPC: Your custom VPC
+* Connectivity Type: Public
+* Subnet: Public Subnet (10.0.1.0/24)
+* Elastic IP: Allocate new
+
+Click:
+👉 Create NAT Gateway
+Wait until Status = **Available**
+
+(This waiting step is VERY important in exam.)
+
+---
+
+# 🛣️ PART F — CONFIGURE PRIVATE ROUTE TABLE
+
+## Step 10: Edit Private Route Table
+
+1. Go to VPC → Route Tables
+2. Find route table for Private Subnet
+3. Click → Edit Routes → Add Route
+
+Enter:
+
+```
+Destination: 0.0.0.0/0
+Target: NAT Gateway (nat-gw)
+```
+
+Click Save.
+
+---
+
+## Step 11: Associate Route Table with Private Subnet
+
+1. Open Route Table
+2. Go to Subnet Associations
+3. Click Edit
+4. Select:
+   ✔ Private Subnet (10.0.2.0/24)
+5. Save
+
+---
+
+# 🔍 PART G — VERIFY INTERNET IN PRIVATE EC2 (FINAL TEST)
+
+## Step 12: Test Internet from Private Instance
+
+Inside private EC2 terminal:
+
+```bash
+ping google.com
+```
+
+If NAT is configured correctly:
+✔ Ping will work
+✔ Private instance gets internet via NAT
+
+This is the FINAL proof of Week 6 experiment.
+
+---
+
+# 🏆 RESULT (WRITE IN RECORD)
+
+Successfully created a VPC with public and private subnets, configured NAT Gateway, connected to private instance through bastion host, and enabled internet access for private EC2 via NAT Gateway.
+
+---
+
+# 🎓 VERY IMPORTANT VIVA (HIGH CHANCE)
+
+**Q: Why NAT Gateway is used?**
+
+> NAT Gateway allows private instances to access the internet without exposing them to public internet.
+
+**Q: Difference IGW vs NAT?**
+
+> IGW provides direct internet access, NAT provides outbound internet only for private subnet.
+
+---
+
+# ⚠️ COMMON EXAM MISTAKES (VERY IMPORTANT)
+
+* Selecting NAT in private subnet ❌ (WRONG)
+* Not allocating Elastic IP ❌
+* Forgetting route 0.0.0.0/0 → NAT ❌
+* Trying to SSH private instance directly ❌
+
+Correct method = Bastion Host.
+
+---
+
+# 🔥 CRITICAL QUESTION (so I guide your exact next click)
+
+Have you already created:
+
+* Public EC2 instance
+* Private EC2 instance
+
+OR are you still at NAT Gateway creation stage?
+(Reply: PUBLIC DONE / PRIVATE DONE / NAT NOT CREATED)
