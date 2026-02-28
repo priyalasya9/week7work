@@ -1,0 +1,65 @@
+WEEK 6( continuation after week 5)
+create private instance add security group rule -mysql/aurora
+go to public instance and connect
+create a pem file (copy from the pem file created)
+chmod 400 private.pem
+ssh -i private.pem ubuntu@10.0.2.x(private ipv4 address of private instance)
+supo apt update
+supo apt upgrade -y
+sudo apt install mysql-server -y
+sudo systemctl status mysql
+create GAT nateway
+✅ STEP 1 — Create NAT Gateway
+
+Go 👉 VPC → NAT Gateways → Create NAT Gateway
+
+Fill:
+	•	Name: nat-gw
+	•	VPC: your custom VPC
+	•	Connectivity type: Public
+	•	Elastic IP: Allocate new
+
+⚠️ IMPORTANT
+
+Scroll until you see Subnet
+
+Select:
+
+👉 Public Subnet (10.0.1.0/24)
+
+Then click Create NAT Gateway
+
+⏳ Wait until status = Available
+
+⸻
+
+✅ STEP 2 — Edit PRIVATE Route Table
+
+Go 👉 VPC → Route Tables
+
+Find route table connected to Private Subnet
+
+(If none → create one)
+
+Click → Edit routes → Add route
+Destination → 0.0.0.0/0
+Target → NAT Gateway → nat-gw
+✅ STEP 3 — Associate Private Subnet
+
+Inside same route table:
+
+👉 Subnet Associations → Edit
+
+Select:
+
+👉 Private Subnet (10.0.2.0/24)
+
+Save.
+✅ STEP 4 — Check Public Route Table
+
+Public subnet route table must have:
+0.0.0.0/0 → Internet Gateway
+✅ STEP 5 — Test in Private EC2
+
+Go to Private EC2 terminal: (which we have connected in public instance)
+ping google.com
